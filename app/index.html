@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TENSHIRO · Replay Lab</title>
+  <style>
+    :root { --bg:#0a0d13; --panel:#121824; --panel2:#171f2c; --line:#2c3749; --text:#f3f6fb; --muted:#98a6ba; --gold:#f7b84b; --cyan:#62d9e8; --red:#ff6f75; --green:#60d39d; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(circle at 77% 0%, #172842 0, transparent 35%), var(--bg); color:var(--text); font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { padding:28px max(24px, calc((100vw - 1420px)/2)); border-bottom:1px solid var(--line); display:flex; gap:20px; justify-content:space-between; align-items:center; }
+    .eyebrow { color:var(--gold); font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+    h1 { font-size:25px; margin:3px 0 0; letter-spacing:-.03em; }
+    .badge { border:1px solid #34506a; background:#122131; color:var(--cyan); padding:8px 11px; border-radius:99px; font-size:12px; }
+    main { max-width:1420px; margin:0 auto; padding:26px 24px 60px; }
+    .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+    .card, .panel { background:linear-gradient(145deg, rgba(23,31,44,.95), rgba(14,19,29,.96)); border:1px solid var(--line); border-radius:14px; }
+    .card { min-height:87px; padding:15px 17px; }
+    .card small { display:block; color:var(--muted); margin-bottom:5px; }
+    .card strong { font-size:17px; }
+    .card .value { color:var(--gold); }
+    .layout { display:grid; grid-template-columns:minmax(0, 1.75fr) minmax(330px, .85fr); gap:20px; align-items:start; }
+    [hidden] { display:none !important; }
+    .mode-tabs { display:flex; gap:8px; margin:0 0 18px; border-bottom:1px solid var(--line); }
+    .mode-tab { padding:11px 16px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); cursor:pointer; font:inherit; }
+    .mode-tab.active { color:var(--gold); border-color:var(--gold); }
+    .panel { padding:18px; }
+    .panel h2 { font-size:14px; margin:0 0 15px; letter-spacing:.01em; }
+    video { width:100%; max-height:63vh; display:block; background:#020304; border-radius:10px; }
+    .time-row { display:flex; align-items:center; gap:12px; margin:14px 0 10px; color:var(--muted); font-variant-numeric:tabular-nums; }
+    .time-row button, .actions button { cursor:pointer; border:1px solid #3c506b; background:#1a2a3e; color:var(--text); padding:7px 11px; border-radius:8px; }
+    .time-row button:hover, .actions button:hover { background:#243b57; }
+    input[type=range] { width:100%; accent-color:var(--gold); }
+    .timeline { position:relative; height:76px; margin:17px 0 6px; border-radius:10px; background:linear-gradient(90deg, #111a27, #152438); border:1px solid #33465e; cursor:crosshair; overflow:hidden; }
+    .timeline:before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), rgba(255,255,255,.08) calc(10% - 1px), rgba(255,255,255,.08) 10%); }
+    .timeline-label { position:absolute; bottom:8px; color:#8ea0b6; font-size:11px; transform:translateX(-50%); }
+    .fight-range { position:absolute; top:12px; height:24px; min-width:3px; border-radius:6px; opacity:.34; z-index:1; cursor:pointer; }
+    .fight-range[data-side="tenshiro"] { background:var(--green); }
+    .fight-range[data-side="opponent"] { background:var(--red); }
+    .fight-range[data-side="unknown"] { background:var(--gold); }
+    .fight-edge { position:absolute; width:11px; height:11px; top:18px; transform:translateX(-50%) rotate(45deg); border:2px solid var(--bg); border-radius:2px; z-index:2; }
+    .fight-edge[data-side="tenshiro"] { background:var(--green); }
+    .fight-edge[data-side="opponent"] { background:var(--red); }
+    .fight-edge[data-side="unknown"] { background:var(--gold); }
+    .marker { position:absolute; width:12px; height:12px; top:17px; transform:translateX(-50%) rotate(45deg); border:2px solid var(--bg); border-radius:2px; z-index:2; }
+    .marker:hover { transform:translateX(-50%) rotate(45deg) scale(1.35); }
+    .marker[data-type="fight"] { background:var(--red); } .marker[data-type="death"] { background:#cc81ff; } .marker[data-type="objective"] { background:var(--gold); } .marker[data-type="economy"] { background:var(--green); }
+    .cursor { position:absolute; height:100%; width:2px; background:var(--cyan); top:0; pointer-events:none; box-shadow:0 0 10px var(--cyan); z-index:3; }
+    .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    .legend i { width:8px; height:8px; display:inline-block; transform:rotate(45deg); margin-right:5px; } .fight { background:var(--red); } .death { background:#cc81ff; } .objective { background:var(--gold); } .economy { background:var(--green); }
+    .hint { color:var(--muted); font-size:12px; margin:13px 0 0; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    label { color:var(--muted); font-size:12px; display:block; margin-bottom:5px; }
+    input, select, textarea { font:inherit; width:100%; color:var(--text); background:#0e1420; border:1px solid #314057; border-radius:8px; padding:9px 10px; }
+    textarea { resize:vertical; min-height:68px; }
+    .wide { grid-column:1 / -1; }
+    .actions { display:flex; gap:8px; margin-top:12px; }
+    .actions .primary { background:var(--gold); border-color:var(--gold); color:#1a1306; font-weight:800; }
+    .right-panel { display:grid; gap:20px; }
+    .selected { padding:13px; background:#0e1420; border-radius:9px; border-left:3px solid var(--cyan); color:var(--muted); }
+    .selected strong { display:block; color:var(--text); font-size:17px; margin-bottom:3px; }
+    .event-list { display:grid; gap:7px; max-height:300px; overflow:auto; }
+    .event { display:grid; grid-template-columns:62px 1fr auto; align-items:center; gap:10px; background:#0e1420; border:1px solid #26344a; border-radius:8px; padding:9px; cursor:pointer; }
+    .event:hover { border-color:#55708e; } .event time { color:var(--cyan); font-variant-numeric:tabular-nums; } .event b { font-size:12px; text-transform:uppercase; letter-spacing:.05em; } .event span { color:var(--muted); font-size:12px; }
+    .event button { background:transparent; color:#8494a9; border:0; cursor:pointer; font-size:17px; }
+    .empty { color:var(--muted); padding:14px 0; }
+    .fight-controls { display:flex; gap:8px; margin-top:12px; }
+    .fight-controls button { flex:1; cursor:pointer; border:1px solid #3c506b; background:#1a2a3e; color:var(--text); padding:9px; border-radius:8px; }
+    .fight-controls button:disabled { opacity:.42; cursor:not-allowed; }
+    .fight-controls .primary { background:var(--red); border-color:var(--red); color:#210b0d; font-weight:800; }
+    .fight-status { margin-top:10px; color:var(--muted); font-size:12px; }
+    .carousel-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .carousel-head h2 { margin:0; }
+    .carousel-nav { display:flex; gap:6px; }
+    .carousel-nav button { cursor:pointer; background:#1a2a3e; border:1px solid #3c506b; color:var(--text); width:30px; height:30px; border-radius:8px; }
+    .chart-title { margin:13px 0 0; color:var(--gold); font-size:13px; font-weight:700; }
+    .chart-wrap { margin-top:8px; background:#0e1420; border:1px solid #26344a; border-radius:10px; padding:10px; }
+    .chart-svg { width:100%; display:block; overflow:visible; }
+    .chart-svg text { fill:var(--muted); font-size:12px; }
+    .chart-svg .grid { stroke:#27354a; stroke-width:1; }
+    .chart-svg .series-ours { stroke:var(--cyan); fill:none; stroke-width:3.5; }
+    .chart-svg .series-enemy { stroke:var(--gold); fill:none; stroke-width:3.5; }
+    .chart-svg circle { cursor:pointer; stroke:#0a0d13; stroke-width:2.5; }
+    .chart-svg circle.series-ours { fill:var(--cyan); }
+    .chart-svg circle.series-enemy { fill:var(--gold); }
+    .chart-legend { display:flex; gap:14px; color:var(--muted); font-size:11px; margin:7px 3px 2px; }
+    .chart-legend i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+    .chart-empty { color:var(--muted); font-size:12px; padding:8px 4px; }
+    .delta-note { color:var(--muted); font-size:12px; margin:9px 2px 0; }
+    .carousel-dots { display:flex; justify-content:center; gap:6px; margin-top:10px; }
+    .carousel-dots button { width:7px; height:7px; padding:0; border:0; border-radius:50%; background:#42516a; cursor:pointer; }
+    .carousel-dots button.active { background:var(--gold); width:18px; border-radius:9px; }
+    .chart-points { display:grid; gap:5px; max-height:94px; overflow:auto; margin-top:10px; }
+    .chart-point-row { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); background:#0e1420; padding:6px 8px; border-radius:7px; font-size:11px; }
+    .chart-point-row button { border:0; background:transparent; color:#9aa9bc; cursor:pointer; }
+    .utility { display:flex; gap:8px; margin-top:13px; } .utility button, .utility label { cursor:pointer; flex:1; text-align:center; padding:8px; border:1px solid #35465c; border-radius:8px; color:var(--muted); margin:0; } #fileInput { display:none; }
+    @media (max-width:900px) { .layout { grid-template-columns:1fr; } .cards { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><div class="eyebrow">Guild replay analytics</div><h1>TENSHIRO · Replay Lab</h1></div>
+    <div class="badge">локальный прототип · данные остаются на компьютере</div>
+  </header>
+  <main>
+    <section class="cards">
+      <div class="card"><small>Матч</small><strong id="matchName">TENSHIRO vs ?</strong></div>
+      <div class="card"><small>Дата записи</small><strong id="matchDate">31.10.2026</strong></div>
+      <div class="card"><small>Событий размечено</small><strong class="value" id="eventTotal">0</strong></div>
+      <div class="card"><small>Материалы</small><strong>1 видео · 12 скринов</strong></div>
+    </section>
+    <nav class="mode-tabs" aria-label="Режим аналитики">
+      <button class="mode-tab active" id="annotationTab" type="button" aria-selected="true">Разметка</button>
+      <button class="mode-tab" id="graphsTab" type="button" aria-selected="false">Графики</button>
+    </nav>
+    <section class="layout" id="annotationView">
+      <div id="annotationMediaSlot">
+        <div class="panel" id="mediaPanel">
+        <h2>Просмотр матча</h2>
+        <video id="video" controls preload="metadata"><source src="../Where%20Winds%20Meet%202026%2010%2031%20Juiced.mp4" type="video/mp4"></video>
+        <div class="time-row"><button id="back">−5 с</button><strong id="now">00:00</strong><span>/</span><span id="duration">—</span><button id="forward">+5 с</button></div>
+        <input id="scrubber" type="range" min="0" max="100" value="0" step="0.01" aria-label="Текущий момент видео">
+        <div class="timeline" id="timeline" title="Нажми, чтобы перейти к моменту"><div class="cursor" id="cursor"></div></div>
+        <div class="legend"><span><i class="fight"></i>файт</span><span><i class="death"></i>смерть</span><span><i class="objective"></i>objective</span><span><i class="economy"></i>экономика</span></div>
+        <p class="hint">Файт задаётся парой отметок начала и конца.</p>
+        </div>
+      </div>
+      <aside class="right-panel">
+        <section class="panel">
+          <h2>Текущий момент</h2>
+          <div class="selected"><strong id="selectedTime">00:00</strong><span id="selectedHint">Выбери момент на видео или таймлайне.</span></div>
+        </section>
+        <section class="panel">
+          <h2>Интервал файта</h2>
+          <div class="form-grid">
+            <div><label for="fightSide">Кто в плюсе к концу</label><select id="fightSide"><option value="unknown">Пока неясно</option><option value="tenshiro">TENSHIRO</option><option value="opponent">Противник</option></select></div>
+            <div class="wide"><label for="fightNote">Итог / наблюдение</label><textarea id="fightNote" placeholder="Например: отступили, objective не продвинулся."></textarea></div>
+          </div>
+          <div class="fight-controls"><button class="primary" id="startFight">Начать файт · <span id="fightStartTime">00:00</span></button><button id="endFight" disabled>Завершить файт</button><button id="cancelFight" disabled>Сбросить</button></div>
+          <div class="fight-status" id="fightStatus">Отметь момент начала, затем перейди к концу файта и закрой интервал.</div>
+        </section>
+        <section class="panel">
+          <h2>Точечное событие</h2>
+          <div class="form-grid">
+            <div><label for="type">Тип</label><select id="type"><option value="death">Смерть</option><option value="objective">Objective</option><option value="economy">Экономика</option></select></div>
+            <div><label for="side">Преимущество</label><select id="side"><option value="unknown">Неясно</option><option value="tenshiro">TENSHIRO</option><option value="opponent">Противник</option></select></div>
+            <div class="wide"><label for="note">Что произошло</label><textarea id="note" placeholder="Например: начали файт у objective; два игрока противника выбиты."></textarea></div>
+          </div>
+          <div class="actions"><button class="primary" id="addEvent">Записать на <span id="addTime">00:00</span></button></div>
+        </section>
+        <section class="panel">
+          <h2>Отметки матча</h2><div class="event-list" id="eventList"></div>
+          <div class="utility"><button id="export">Export JSON</button><label for="fileInput">Import JSON</label><input id="fileInput" type="file" accept="application/json"></div>
+        </section>
+      </aside>
+    </section>
+    <section class="layout" id="graphsView" hidden>
+      <div id="graphsMediaSlot"></div>
+      <aside class="right-panel">
+        <section class="panel">
+          <div class="carousel-head"><h2>Показатели по времени</h2><div class="carousel-nav"><button id="chartPrev" aria-label="Предыдущий график">‹</button><button id="chartNext" aria-label="Следующий график">›</button></div></div>
+          <div class="chart-title" id="chartTitle"></div>
+          <div class="chart-wrap" id="chartWrap"></div>
+          <div class="delta-note" id="chartDelta"></div>
+          <div class="chart-legend"><span><i style="background:var(--cyan)"></i>TENSHIRO</span><span><i style="background:var(--gold)"></i>Противник</span></div>
+          <div class="carousel-dots" id="chartDots"></div>
+          <p class="hint">Добавляй реальные значения на выбранных моментах. Линия соединяет введённые точки; промежутки между ними не являются измерениями.</p>
+        </section>
+        <section class="panel">
+          <h2>Добавить точку графика</h2>
+          <div class="form-grid">
+            <div><label for="metric">Показатель</label><select id="metric"><option value="coins">Монеты</option><option value="kills">Убийства</option></select></div>
+            <div><label for="metricSide">Сторона</label><select id="metricSide"><option value="tenshiro">TENSHIRO</option><option value="opponent">Противник</option></select></div>
+            <div class="wide"><label for="metricValue">Значение на <span id="metricTime">00:00</span></label><input id="metricValue" type="number" min="0" step="any" placeholder="Введи значение со скрина"></div>
+          </div>
+          <div class="actions"><button class="primary" id="addMetricPoint">Добавить точку</button></div>
+          <div class="chart-points" id="metricPointList"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+  <script>
+    const video = document.querySelector('#video'), scrubber = document.querySelector('#scrubber'), timeline = document.querySelector('#timeline');
+    const now = document.querySelector('#now'), durationEl = document.querySelector('#duration'), cursor = document.querySelector('#cursor');
+    const selectedTime = document.querySelector('#selectedTime'), addTime = document.querySelector('#addTime'), eventList = document.querySelector('#eventList');
+    const storageKey = 'tenshiro-replay-lab-v2', oldStorageKey = 'tenshiro-replay-lab-v1';
+    const metrics = [
+      {key:'coins', label:'Монеты', unit:'монет'},
+      {key:'kills', label:'Убийства', unit:'убийств'}
+    ];
+    const colors = { death:'#cc81ff', objective:'#f7b84b', economy:'#60d39d' };
+    const labels = { death:'Смерть', objective:'Objective', economy:'Экономика' };
+    let selected = 0, activeMetric = 0, events = [], fights = [], metricPoints = [], pendingFight = null;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored); events = parsed.events || []; fights = parsed.fights || []; metricPoints = (parsed.metricPoints || []).filter(point=>metrics.some(metric=>metric.key===point.metric)); pendingFight = parsed.pendingFight || null;
+      } else {
+        const old = JSON.parse(localStorage.getItem(oldStorageKey) || '[]'); events = Array.isArray(old) ? old : old.events || [];
+      }
+    } catch { events = []; fights = []; metricPoints = []; pendingFight = null; }
+    function format(sec) { sec = Math.max(0, Math.floor(sec || 0)); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
+    function setSelected(sec) {
+      selected = sec; const label = format(sec); selectedTime.textContent = label; addTime.textContent = label;
+      document.querySelector('#metricTime').textContent = label;
+      document.querySelector('#fightStartTime').textContent = pendingFight ? format(pendingFight.start) : label;
+      document.querySelector('#selectedHint').textContent = 'Новая отметка привяжется к этому таймкоду.';
+    }
+    function seek(sec) { if (Number.isFinite(video.duration)) video.currentTime = Math.max(0, Math.min(sec, video.duration)); setSelected(sec); }
+    function save() { localStorage.setItem(storageKey, JSON.stringify({version:2,events,fights,metricPoints,pendingFight})); }
+    function sideName(side) { return side === 'tenshiro' ? 'TENSHIRO' : side === 'opponent' ? 'Противник' : 'неясно'; }
+    function renderFightControls() {
+      const active = Boolean(pendingFight);
+      document.querySelector('#startFight').disabled = active;
+      document.querySelector('#endFight').disabled = !active;
+      document.querySelector('#cancelFight').disabled = !active;
+      document.querySelector('#fightStatus').textContent = active
+        ? `Файт начат в ${format(pendingFight.start)}. Перейди к концу файта и закрой интервал.`
+        : 'Отметь момент начала, затем перейди к концу файта и закрой интервал.';
+    }
+    function renderTimeline() {
+      timeline.querySelectorAll('.marker,.timeline-label,.fight-range,.fight-edge').forEach(el => el.remove());
+      const maxDataTime = Math.max(0, ...metricPoints.map(point => point.time), ...fights.map(fight => fight.end || fight.start), ...events.map(event => event.time));
+      const total = video.duration || maxDataTime || 1;
+      fights.forEach(fight => {
+        const finish = fight.end ?? Math.max(fight.start, selected);
+        const range = document.createElement('div'); range.className='fight-range'; range.dataset.side=fight.side;
+        range.style.left=`${Math.min(100, fight.start/total*100)}%`; range.style.width=`${Math.max(.4,(finish-fight.start)/total*100)}%`;
+        range.title=`Файт ${format(fight.start)}–${format(finish)} · ${sideName(fight.side)}`;
+        range.onclick = e => { e.stopPropagation(); seek(fight.start); }; timeline.append(range);
+        [{time:fight.start,edge:'start'},{time:finish,edge:'end'}].forEach(item => {
+          const marker=document.createElement('button'); marker.className='fight-edge'; marker.dataset.side=fight.side;
+          marker.style.left=`${Math.min(100,item.time/total*100)}%`; marker.title=`${item.edge==='start'?'Начало':'Конец'} файта · ${format(item.time)}`;
+          marker.onclick=e=>{e.stopPropagation();seek(item.time);}; timeline.append(marker);
+        });
+      });
+      events.forEach(event => {
+        const marker=document.createElement('button'); marker.className='marker'; marker.dataset.type=event.type;
+        marker.style.left=`${Math.min(100,event.time/total*100)}%`; marker.title=`${format(event.time)} · ${labels[event.type]||event.type}`;
+        marker.onclick=e=>{e.stopPropagation();seek(event.time);}; timeline.append(marker);
+      });
+      [0,.25,.5,.75,1].forEach(p => { const label=document.createElement('span'); label.className='timeline-label'; label.style.left=`${p*100}%`; label.textContent=format(total*p); timeline.append(label); });
+    }
+    function renderEvents() {
+      const rows = [
+        ...fights.map(fight => ({kind:'fight',time:fight.start,end:fight.end,text:`Файт · ${format(fight.start)}–${format(fight.end)} (${format(fight.end-fight.start)}) · в плюсе: ${sideName(fight.side)}${fight.note?` · ${fight.note}`:''}`,item:fight})),
+        ...events.map(event => ({kind:'event',time:event.time,text:`${labels[event.type]||event.type} · ${event.note||sideName(event.side)}`,item:event}))
+      ].sort((a,b)=>a.time-b.time);
+      eventList.replaceChildren();
+      if (!rows.length) { const empty=document.createElement('div'); empty.className='empty'; empty.textContent='Пока нет отметок.'; eventList.append(empty); }
+      rows.forEach(row => {
+        const el=document.createElement('div'); el.className='event';
+        const time=document.createElement('time'); time.textContent=format(row.time);
+        const body=document.createElement('div'); const title=document.createElement('b'); title.textContent=row.kind==='fight'?'Интервал файта':(labels[row.kind]||row.kind); title.style.color=row.kind==='fight'?colors.objective:colors[row.kind];
+        const detail=document.createElement('span'); detail.textContent=row.text; body.append(title,document.createElement('br'),detail);
+        const remove=document.createElement('button'); remove.type='button'; remove.title='Удалить отметку'; remove.textContent='×';
+        el.append(time,body,remove); el.onclick=()=>seek(row.time);
+        remove.onclick=e=>{e.stopPropagation();if(row.kind==='fight')fights=fights.filter(item=>item!==row.item);else events=events.filter(item=>item!==row.item);save();render();};
+        eventList.append(el);
+      });
+    }
+    function renderCarousel() {
+      const metric=metrics[activeMetric]; document.querySelector('#chartTitle').textContent=metric.label;
+      const dots=document.querySelector('#chartDots'); dots.replaceChildren();
+      metrics.forEach((item,index)=>{const dot=document.createElement('button');dot.className=index===activeMetric?'active':'';dot.title=item.label;dot.setAttribute('aria-label',item.label);dot.onclick=()=>{activeMetric=index;renderCarousel();};dots.append(dot);});
+      const values=metricPoints.filter(point=>point.metric===metric.key); const svgNS='http://www.w3.org/2000/svg';
+      const width=400,height=310,left=57,right=388,top=24,bottom=258; const svg=document.createElementNS(svgNS,'svg'); svg.setAttribute('viewBox',`0 0 ${width} ${height}`); svg.classList.add('chart-svg');
+      const maxTime=video.duration||Math.max(60,...values.map(point=>point.time)); const maxValue=Math.max(1,...values.map(point=>point.value))*1.12;
+      for(let i=0;i<=4;i++){
+        const y=bottom-(bottom-top)*i/4, val=maxValue*i/4; const line=document.createElementNS(svgNS,'line');line.setAttribute('x1',left);line.setAttribute('x2',right);line.setAttribute('y1',y);line.setAttribute('y2',y);line.classList.add('grid');svg.append(line);
+        const text=document.createElementNS(svgNS,'text');text.setAttribute('x',left-6);text.setAttribute('y',y+3);text.setAttribute('text-anchor','end');text.textContent=Number(val.toPrecision(3)).toLocaleString('ru-RU');svg.append(text);
+      }
+      for(let i=0;i<=4;i++){
+        const x=left+(right-left)*i/4;const text=document.createElementNS(svgNS,'text');text.setAttribute('x',x);text.setAttribute('y',294);text.setAttribute('text-anchor',i===0?'start':i===4?'end':'middle');text.textContent=format(maxTime*i/4);svg.append(text);
+      }
+      const colorsBySide={tenshiro:'series-ours',opponent:'series-enemy'};
+      ['tenshiro','opponent'].forEach(side=>{
+        const sidePoints=values.filter(point=>point.side===side).sort((a,b)=>a.time-b.time); if(!sidePoints.length)return;
+        const coords=sidePoints.map(point=>({point,x:left+(right-left)*Math.min(1,point.time/maxTime),y:bottom-(bottom-top)*point.value/maxValue}));
+        if(coords.length>1){const path=document.createElementNS(svgNS,'polyline');path.setAttribute('points',coords.map(p=>`${p.x},${p.y}`).join(' '));path.classList.add(colorsBySide[side]);svg.append(path);}
+        coords.forEach(({point,x,y})=>{const circle=document.createElementNS(svgNS,'circle');circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r',6);circle.classList.add(colorsBySide[side]);circle.setAttribute('title',`${format(point.time)} · ${sideName(side)} · ${point.value.toLocaleString('ru-RU')} ${metric.unit}`);circle.onclick=()=>seek(point.time);svg.append(circle);});
+      });
+      const wrap=document.querySelector('#chartWrap');wrap.replaceChildren();
+      if(values.length){wrap.append(svg);}else{const empty=document.createElement('div');empty.className='chart-empty';empty.textContent=`Пока нет точек «${metric.label}». Перейди на нужный момент видео, введи значение и нажми «Добавить точку».`;wrap.append(svg,empty);}
+      const pairs=new Map(); values.forEach(point=>{const key=String(point.time);const pair=pairs.get(key)||{};pair[point.side]=point.value;pairs.set(key,pair);});
+      const comparable=[...pairs.entries()].filter(([,pair])=>Number.isFinite(pair.tenshiro)&&Number.isFinite(pair.opponent)).sort((a,b)=>Number(a[0])-Number(b[0]));
+      const deltaEl=document.querySelector('#chartDelta');
+      if(comparable.length){const [time,pair]=comparable[comparable.length-1],delta=pair.tenshiro-pair.opponent,sign=delta>0?'+':'';deltaEl.textContent=`Разница на ${format(Number(time))} (TENSHIRO − противник): ${sign}${delta.toLocaleString('ru-RU')} ${metric.unit}.`;}
+      else{deltaEl.textContent='Разница появится, когда введёшь обе стороны на одном и том же таймкоде.';}
+      const pointList=document.querySelector('#metricPointList');pointList.replaceChildren();
+      values.sort((a,b)=>a.time-b.time).forEach(point=>{const row=document.createElement('div');row.className='chart-point-row';const label=document.createElement('span');label.textContent=`${format(point.time)} · ${sideName(point.side)} · ${point.value.toLocaleString('ru-RU')} ${metric.unit}`;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Удалить точку';row.append(label,remove);row.onclick=()=>seek(point.time);remove.onclick=e=>{e.stopPropagation();metricPoints=metricPoints.filter(item=>item.id!==point.id);save();renderCarousel();};pointList.append(row);});
+    }
+    function render() {
+      renderTimeline(); renderEvents(); renderFightControls(); renderCarousel();
+      document.querySelector('#eventTotal').textContent=fights.length+events.length;
+    }
+    function setLayer(layer) {
+      const showGraphs=layer==='graphs';
+      const annotationView=document.querySelector('#annotationView'),graphsView=document.querySelector('#graphsView');
+      annotationView.hidden=showGraphs; graphsView.hidden=!showGraphs;
+      (showGraphs?document.querySelector('#graphsMediaSlot'):document.querySelector('#annotationMediaSlot')).append(document.querySelector('#mediaPanel'));
+      document.querySelector('#annotationTab').classList.toggle('active',!showGraphs);
+      document.querySelector('#graphsTab').classList.toggle('active',showGraphs);
+      document.querySelector('#annotationTab').setAttribute('aria-selected',String(!showGraphs));
+      document.querySelector('#graphsTab').setAttribute('aria-selected',String(showGraphs));
+    }
+    document.querySelector('#annotationTab').onclick=()=>setLayer('annotation');
+    document.querySelector('#graphsTab').onclick=()=>setLayer('graphs');
+    video.addEventListener('loadedmetadata',()=>{durationEl.textContent=format(video.duration);setSelected(0);render();});
+    video.addEventListener('timeupdate',()=>{const pct=video.duration?video.currentTime/video.duration*100:0;scrubber.value=pct;cursor.style.left=`${pct}%`;now.textContent=format(video.currentTime);setSelected(video.currentTime);});
+    scrubber.oninput=e=>seek((e.target.value/100)*(video.duration||0));
+    timeline.onclick=e=>{const rect=timeline.getBoundingClientRect();seek((e.clientX-rect.left)/rect.width*(video.duration||0));};
+    document.querySelector('#back').onclick=()=>seek(video.currentTime-5); document.querySelector('#forward').onclick=()=>seek(video.currentTime+5);
+    document.querySelector('#startFight').onclick=()=>{pendingFight={start:selected};save();render();};
+    document.querySelector('#endFight').onclick=()=>{
+      if(!pendingFight)return; if(selected<=pendingFight.start){alert('Конец файта должен быть позже его начала.');return;}
+      fights.push({id:`fight-${Date.now()}-${Math.random().toString(16).slice(2)}`,start:pendingFight.start,end:selected,side:document.querySelector('#fightSide').value,note:document.querySelector('#fightNote').value.trim()});
+      pendingFight=null;document.querySelector('#fightNote').value='';save();render();
+    };
+    document.querySelector('#cancelFight').onclick=()=>{pendingFight=null;save();render();};
+    document.querySelector('#addEvent').onclick=()=>{events.push({id:`event-${Date.now()}-${Math.random().toString(16).slice(2)}`,time:selected,type:document.querySelector('#type').value,side:document.querySelector('#side').value,note:document.querySelector('#note').value.trim()});document.querySelector('#note').value='';save();render();};
+    document.querySelector('#addMetricPoint').onclick=()=>{const input=document.querySelector('#metricValue'),value=Number(input.value),metric=document.querySelector('#metric').value;if(input.value===''||!Number.isFinite(value)||value<0){alert('Введи число не меньше нуля.');return;}metricPoints.push({id:`point-${Date.now()}-${Math.random().toString(16).slice(2)}`,time:selected,metric,side:document.querySelector('#metricSide').value,value});input.value='';save();renderCarousel();};
+    document.querySelector('#metric').onchange=e=>{activeMetric=metrics.findIndex(item=>item.key===e.target.value);renderCarousel();};
+    document.querySelector('#chartPrev').onclick=()=>{activeMetric=(activeMetric+metrics.length-1)%metrics.length;document.querySelector('#metric').value=metrics[activeMetric].key;renderCarousel();};
+    document.querySelector('#chartNext').onclick=()=>{activeMetric=(activeMetric+1)%metrics.length;document.querySelector('#metric').value=metrics[activeMetric].key;renderCarousel();};
+    document.querySelector('#export').onclick=()=>{const blob=new Blob([JSON.stringify({version:2,events,fights,metricPoints,pendingFight},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tenshiro-replay-analysis.json';a.click();URL.revokeObjectURL(a.href);};
+    document.querySelector('#fileInput').onchange=async e=>{try{const imported=JSON.parse(await e.target.files[0].text());events=Array.isArray(imported)?imported:(imported.events||[]);fights=imported.fights||[];metricPoints=(imported.metricPoints||[]).filter(point=>metrics.some(metric=>metric.key===point.metric));pendingFight=imported.pendingFight||null;save();render();}catch{alert('Не удалось прочитать JSON-файл.');}};
+    setSelected(0); setLayer('annotation'); render();
+  </script>
+</body>
+</html>
