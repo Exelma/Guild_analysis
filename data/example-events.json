@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "events": [
+    {
+      "time": 95.4,
+      "type": "death",
+      "side": "opponent",
+      "note": "Размен у нижней башни, у нас -2"
+    },
+    {
+      "time": 438.2,
+      "type": "objective",
+      "side": "tenshiro",
+      "note": "Забрали objective, противник отошёл на базу"
+    }
+  ],
+  "fights": [
+    {
+      "start": 540,
+      "end": 605.5,
+      "side": "opponent",
+      "note": "Вайп на миде, обе башни остались у них"
+    }
+  ],
+  "metricPoints": [
+    {
+      "time": 540,
+      "metric": "coins",
+      "side": "tenshiro",
+      "value": 13200
+    },
+    {
+      "time": 540,
+      "metric": "coins",
+      "side": "opponent",
+      "value": 15800
+    }
+  ],
+  "pendingFight": null
+}

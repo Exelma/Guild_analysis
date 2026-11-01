@@ -48,6 +48,27 @@
 переносимую копию, **Import JSON** возвращает её обратно. Очистка данных
 браузера удалит разметку — экспорт перед этим обязателен.
 
+## Данные
+
+Экспорт — один JSON-объект версии 2:
+
+```json
+{
+  "version": 2,
+  "events":       [ { "time": 95.4, "type": "death", "side": "opponent", "note": "…" } ],
+  "fights":       [ { "start": 540, "end": 605.5, "side": "opponent", "note": "…" } ],
+  "metricPoints": [ { "time": 540, "metric": "coins", "side": "tenshiro", "value": 13200 } ],
+  "pendingFight": null
+}
+```
+
+- `time`, `start`, `end` — секунды от начала записи;
+- `type` — `death`, `objective` или `economy`;
+- `metric` — `coins` или `kills`;
+- `side` — `tenshiro`, `opponent` или `unknown` (для событий).
+
+Пример с заполненными полями лежит в `data/example-events.json`.
+
 ## Происхождение
 
 Интерфейсный прототип `app/index.html` — отрисовка макета, таймлайн, графики,
